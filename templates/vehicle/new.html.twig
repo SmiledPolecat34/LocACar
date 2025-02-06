@@ -1,11 +1,41 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Ajouter un véhicule{% endblock %}
+{% block title %}Ajouter un Véhicule{% endblock %}
 
 {% block body %}
-    <h1>Ajouter un véhicule</h1>
+<div class="container mt-4">
+    <h1>Ajouter un Véhicule</h1>
     {{ form_start(form) }}
-        {{ form_widget(form) }}
+        <div class="mb-3">
+            {{ form_label(form.marque) }}
+            {{ form_widget(form.marque, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(form.marque) }}
+        </div>
+        <div class="mb-3">
+            {{ form_label(form.immatriculation) }}
+            {{ form_widget(form.immatriculation, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(form.immatriculation) }}
+        </div>
+        <div class="mb-3">
+            {{ form_label(form.prixJournalier) }}
+            {{ form_widget(form.prixJournalier, {'attr': {
+                'class': 'form-range',
+                'min': 100,
+                'max': 500,
+                'step': 1,
+                'oninput': 'document.getElementById("priceCounter").innerText = this.value'
+            }}) }}
+            <small class="form-text text-muted">
+                Prix sélectionné : <span id="priceCounter">{{ form.prixJournalier.vars.value|default(100) }}</span> €
+            </small>
+            {{ form_errors(form.prixJournalier) }}
+        </div>
+        <div class="mb-3">
+            {{ form_label(form.disponible) }}
+            {{ form_widget(form.disponible) }}
+            {{ form_errors(form.disponible) }}
+        </div>
         <button type="submit" class="btn btn-primary">Enregistrer</button>
     {{ form_end(form) }}
+</div>
 {% endblock %}

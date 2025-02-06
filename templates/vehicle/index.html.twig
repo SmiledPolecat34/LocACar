@@ -3,19 +3,31 @@
 {% block title %}Liste des Véhicules{% endblock %}
 
 {% block body %}
-<div style="overflow: visible; min-height: 100pt;">
+<div style="min-height: 100pt;">
     <h1 class="mb-4">Liste des Véhicules</h1>
+    
+    {# Bouton visible uniquement pour l'admin #}
+    {% if is_granted('ROLE_ADMIN') %}
+        <a href="{{ path('vehicle_new') }}" class="btn btn-primary mb-3">Ajouter un véhicule</a>
+    {% endif %}
     
     {# Formulaire de filtrage – envoi des filtres en GET #}
     <form method="get" action="{{ path('vehicle_index') }}" class="mb-4">
         <div class="row">
             <div class="col-md-4">
                 <label for="marque" class="form-label">Marque :</label>
-                <input type="text" name="marque" id="marque" class="form-control" value="{{ filters.marque|default('') }}">
+                <select name="marque" id="marque" class="form-control">
+                    <option value="">Toutes</option>
+                    {% for marque in marques %}
+                        <option value="{{ marque }}" {% if filters.marque is defined and filters.marque == marque %}selected{% endif %}>
+                            {{ marque }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-md-4">
                 <label for="prix" class="form-label">Prix max (€/jour) :</label>
-                <input type="number" name="prix" id="prix" class="form-control" value="{{ filters.prix|default('') }}">
+                <input type="number" name="prix" id="prix" class="form-control" min="100" max="500" value="{{ filters.prix|default('') }}">
             </div>
             <div class="col-md-4">
                 <label for="disponible" class="form-label">Disponibilité :</label>
@@ -63,7 +75,7 @@
                         <td>
                             {% if is_granted('ROLE_ADMIN') %}
                                 <a href="{{ path('vehicle_edit', {'id': vehicle.id}) }}" class="btn btn-warning btn-sm">Modifier</a>
-                                <form action="{{ path('vehicle_delete', {'id': vehicle.id}) }}" method="post" style="display:inline;" onsubmit="return confirmDeletion({{ vehicle.comments|length }});">
+                                <form action="{{ path('vehicle_delete', {'id': vehicle.id}) }}" method="post" style="display:inline;">
                                     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ vehicle.id) }}">
                                     <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
                                 </form>
@@ -82,13 +94,4 @@
     {% endif %}
     <div style="margin-bottom:163.5pt;position:sticky"></div>
 </div>
-
-<script>
-function confirmDeletion(commentCount) {
-    if(commentCount > 0) {
-       return confirm("Ce véhicule a " + commentCount + " commentaire(s) associé(s). Voulez-vous les supprimer avec le véhicule ?");
-    }
-    return confirm("Voulez-vous vraiment supprimer ce véhicule ?");
-}
-</script>
 {% endblock %}

@@ -1,9 +1,9 @@
 <?php
-
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\ReservationRepository;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ReservationRepository::class)]
 class Reservation
@@ -28,7 +28,12 @@ class Reservation
     private ?\DateTimeInterface $dateFin = null;
 
     #[ORM\Column(type: 'float')]
-    private ?float $prixTotal = null;    
+    #[Assert\Range(
+        min: 100,
+        max: 500,
+        notInRangeMessage: 'Le prix d’une location doit être compris entre {{ min }} et {{ max }} euros.'
+    )]
+    private ?float $prixTotal = null;
 
     public function getId(): ?int
     {

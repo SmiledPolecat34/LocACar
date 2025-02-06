@@ -14,33 +14,28 @@ use Symfony\Component\Routing\Annotation\Route;
 class VehicleController extends AbstractController
 {
     #[Route('/', name: 'vehicle_index', methods: ['GET'])]
-    public function index(Request $request, VehicleRepository $vehicleRepository): Response
+    public function index(Request $request, VehicleRepository $vehicleRepository, EntityManagerInterface $em): Response
     {
-        // Récupérer les filtres de l'URL (query string)
+        // Récupérer les filtres depuis l'URL (query string)
         $marque     = $request->query->get('marque');
         $prixMax    = $request->query->get('prix');   // Prix maximum souhaité (€/jour)
         $disponible = $request->query->get('disponible'); // '1' pour disponible, '0' pour indisponible, ou vide pour tous
 
         // Construction du QueryBuilder pour filtrer les véhicules
         $qb = $vehicleRepository->createQueryBuilder('v');
-
         if ($marque) {
-            $qb->andWhere('v.marque LIKE :marque')
-               ->setParameter('marque', '%' . $marque . '%');
+            $qb->andWhere('v.marque = :marque')
+               ->setParameter('marque', $marque);
         }
-
         if ($prixMax) {
             $qb->andWhere('v.prixJournalier <= :prixMax')
                ->setParameter('prixMax', $prixMax);
         }
-
-        // Appliquer le filtre sur la disponibilité si renseigné
         if ($disponible !== null && $disponible !== '') {
             $boolDisponible = ($disponible == '1');
             $qb->andWhere('v.disponible = :disponible')
                ->setParameter('disponible', $boolDisponible);
         }
-
         $vehicles = $qb->getQuery()->getResult();
 
         // Préparer les filtres pour pré-remplir le formulaire
@@ -50,9 +45,18 @@ class VehicleController extends AbstractController
             'disponible' => $disponible,
         ];
 
+        $conn = $em->getConnection();
+        $sql = 'SELECT DISTINCT marque FROM vehicle ORDER BY marque ASC';
+        $stmt = $conn->executeQuery($sql);
+        $marquesData = $stmt->fetchAllAssociative();
+        $marques = array_map(function ($row) {
+            return $row['marque'];
+        }, $marquesData);
+
         return $this->render('vehicle/index.html.twig', [
             'vehicles' => $vehicles,
             'filters'  => $filters,
+            'marques'  => $marques,
         ]);
     }
 
@@ -90,7 +94,7 @@ class VehicleController extends AbstractController
     #[Route('/{id}', name: 'vehicle_delete', methods: ['POST'])]
     public function delete(Request $request, Vehicle $vehicle, EntityManagerInterface $em): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$vehicle->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $vehicle->getId(), $request->request->get('_token'))) {
             $em->remove($vehicle);
             $em->flush();
         }
