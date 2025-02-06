@@ -1,0 +1,24 @@
+{# templates/comment/edit.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier votre commentaire{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <h1>Modifier votre commentaire</h1>
+    {{ form_start(commentForm) }}
+        <div class="mb-3">
+            {{ form_label(commentForm.contenu) }}
+            {{ form_widget(commentForm.contenu, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(commentForm.contenu) }}
+        </div>
+        <div class="mb-3">
+            {{ form_label(commentForm.note) }}
+            {{ form_widget(commentForm.note, {'attr': {'class': 'form-control', 'min': 1, 'max': 5}}) }}
+            {{ form_errors(commentForm.note) }}
+        </div>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+    {{ form_end(commentForm) }}
+    <a href="{{ app.request.headers.get('referer') }}" class="btn btn-secondary mt-3">Retour</a>
+</div>
+{% endblock %}

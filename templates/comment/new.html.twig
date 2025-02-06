@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Laisser un commentaire{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1>Laisser un commentaire sur le véhicule : {{ vehicle.marque }}</h1>
+        {{ form_start(commentForm) }}
+            <div class="mb-3">
+                {{ form_label(commentForm.contenu) }}
+                {{ form_widget(commentForm.contenu, {'attr': {'class': 'form-control'}}) }}
+                {{ form_errors(commentForm.contenu) }}
+            </div>
+            <div class="mb-3">
+                {{ form_label(commentForm.note) }}
+                {{ form_widget(commentForm.note, {'attr': {'class': 'form-control', 'min': 1, 'max': 5}}) }}
+                {{ form_errors(commentForm.note) }}
+            </div>
+            <button type="submit" class="btn btn-primary">Envoyer</button>
+        {{ form_end(commentForm) }}
+        <br>
+        <a href="{{ path('vehicle_show', {'id': vehicle.id}) }}" class="btn btn-secondary mt-3">Retour à la fiche du véhicule</a>
+    </div>
+{% endblock %}
+    

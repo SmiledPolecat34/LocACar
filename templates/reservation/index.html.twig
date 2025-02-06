@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Réservations{% endblock %}
+
+{% block body %}
+<div style="overflow-y: auto; min-height: 100pt;">
+    <h1 class="mb-4">Liste de vos réservations</h1>
+    {% if reservations is not empty %}
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Véhicule</th>
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <th>Immatriculation</th>
+                    {% endif %}
+                    <th>Période</th>
+                    <th>Prix</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for reservation in reservations %}
+                <tr>
+                    <td>{{ reservation.vehicle.marque }}</td>
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <td>{{ reservation.vehicle.immatriculation }}</td>
+                    {% endif %}
+                    <td>
+                        Du {{ reservation.dateDebut|date('d/m/Y') }} 
+                        au {{ reservation.dateFin|date('d/m/Y') }}
+                    </td>
+                    <td>{{ reservation.prixTotal }} €</td>
+                    <td>
+                        <a href="{{ path('reservation_show', {'id': reservation.id}) }}" class="btn btn-info btn-sm">Voir le détail</a>
+                        {% if is_granted('ROLE_ADMIN') or (app.user and app.user.id == reservation.client.id) %}
+                            {% if is_granted('ROLE_ADMIN') %}
+                                {% if reservation.dateDebut > "now"|date("Y-m-d H:i:s") %}
+                                    <a href="{{ path('reservation_edit', {'id': reservation.id}) }}" class="btn btn-warning btn-sm">Modifier</a>
+                                    <form action="{{ path('reservation_cancel', {'id': reservation.id}) }}" method="post" style="display:inline;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('cancel' ~ reservation.id) }}">
+                                        <button type="submit" class="btn btn-danger btn-sm">Annuler</button>
+                                    </form>
+                                {% else %}
+                                    <span class="badge bg-secondary">Réservation commencée</span>
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Aucune réservation trouvée.</p>
+    {% endif %}
+    <div style="margin-bottom:163.5pt"></div>
+</div>
+{% endblock %}

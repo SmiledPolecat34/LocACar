@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{% block title %}Mon Application Symfony{% endblock %}</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <style>
+            header {
+                background-color: #343a40;
+                color: #fff;
+                padding: 10px 0;
+                position: fixed;
+                top: 0;
+                width: -webkit-fill-available;
+                z-index: 1000;
+            }
+            header a {
+                color: #fff;
+                text-decoration: none;
+            }
+            header a:hover {
+                text-decoration: underline;
+            }
+            .nav-link.active {
+                font-weight: bold;
+            }
+            main {
+                margin-top: 20px;
+            }
+
+            .space{
+                height: 100px;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="container">
+                <nav class="navbar navbar-expand-lg navbar-dark">
+                    <a class="navbar-brand" href="{{ path('home') }}">LocACar</a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+    
+                    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                            {# Liens visibles pour tous #}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ path('vehicle_index') }}">Véhicules</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ path('reservation_index') }}">Réservations</a>
+                            </li>
+    
+                            {# Liens réservés aux administrateurs #}
+                            {% if is_granted('ROLE_ADMIN') %}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ path('user_index') }}">Utilisateurs</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+    
+                        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                            {% if app.user %}
+                                <li class="nav-item">
+                                    <span class="nav-link">Connecté(e) en tant que {{ app.user.email }}</span>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ path('app_logout') }}">Déconnexion</a>
+                                </li>
+                            {% else %}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ path('app_login') }}">Connexion</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ path('app_register') }}">Inscription</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </header>
+        <div class="space"></div>
+    
+        <main class="container mt-4">
+            {% for label, messages in app.flashes %}
+                <div class="alert alert-{{ label }}" role="alert" style="display:flex;justify-content:center;background-color: #ea4a4a6b;max-width:360pt;padding: 0.7%;border-radius: 8px;border: 1px solid #630202;">
+                    {% for message in messages %}
+                        {{ message }}
+                    {% endfor %}
+                </div>
+            {% endfor %}
+    
+            {% block body %}{% endblock %}
+        </main>
+    
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+</html>

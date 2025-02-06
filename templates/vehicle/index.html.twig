@@ -1,0 +1,94 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Véhicules{% endblock %}
+
+{% block body %}
+<div style="overflow: visible; min-height: 100pt;">
+    <h1 class="mb-4">Liste des Véhicules</h1>
+    
+    {# Formulaire de filtrage – envoi des filtres en GET #}
+    <form method="get" action="{{ path('vehicle_index') }}" class="mb-4">
+        <div class="row">
+            <div class="col-md-4">
+                <label for="marque" class="form-label">Marque :</label>
+                <input type="text" name="marque" id="marque" class="form-control" value="{{ filters.marque|default('') }}">
+            </div>
+            <div class="col-md-4">
+                <label for="prix" class="form-label">Prix max (€/jour) :</label>
+                <input type="number" name="prix" id="prix" class="form-control" value="{{ filters.prix|default('') }}">
+            </div>
+            <div class="col-md-4">
+                <label for="disponible" class="form-label">Disponibilité :</label>
+                <select name="disponible" id="disponible" class="form-control">
+                    <option value="" {% if filters.disponible is empty %}selected{% endif %}>Tous</option>
+                    <option value="1" {% if filters.disponible == '1' %}selected{% endif %}>Disponible</option>
+                    <option value="0" {% if filters.disponible == '0' %}selected{% endif %}>Indisponible</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-secondary mt-3">Filtrer</button>
+    </form>
+
+    {# Affichage de la liste des véhicules #}
+    {% if vehicles is not empty %}
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Marque</th>
+                    <th>Immatriculation</th>
+                    <th>Prix / jour</th>
+                    <th>Disponibilité</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vehicle in vehicles %}
+                    <tr>
+                        <td>{{ vehicle.marque }}</td>
+                        <td>
+                            {% if is_granted('ROLE_ADMIN') %}
+                                {{ vehicle.immatriculation }}
+                            {% else %}
+                                Masqué
+                            {% endif %}
+                        </td>
+                        <td>{{ vehicle.prixJournalier }} €</td>
+                        <td>
+                            {% if vehicle.disponible %}
+                                <span class="badge bg-success">Disponible</span>
+                            {% else %}
+                                <span class="badge bg-danger">Indisponible</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if is_granted('ROLE_ADMIN') %}
+                                <a href="{{ path('vehicle_edit', {'id': vehicle.id}) }}" class="btn btn-warning btn-sm">Modifier</a>
+                                <form action="{{ path('vehicle_delete', {'id': vehicle.id}) }}" method="post" style="display:inline;" onsubmit="return confirmDeletion({{ vehicle.comments|length }});">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ vehicle.id) }}">
+                                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                                </form>
+                            {% else %}
+                                {% if vehicle.disponible %}
+                                    <a href="{{ path('reservation_new', {'vehicleId': vehicle.id}) }}" class="btn btn-primary btn-sm">Réserver</a>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Aucun véhicule trouvé.</p>
+    {% endif %}
+    <div style="margin-bottom:163.5pt;position:sticky"></div>
+</div>
+
+<script>
+function confirmDeletion(commentCount) {
+    if(commentCount > 0) {
+       return confirm("Ce véhicule a " + commentCount + " commentaire(s) associé(s). Voulez-vous les supprimer avec le véhicule ?");
+    }
+    return confirm("Voulez-vous vraiment supprimer ce véhicule ?");
+}
+</script>
+{% endblock %}

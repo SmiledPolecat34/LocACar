@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Réserver le véhicule{% endblock %}
+
+{% block body %}
+<div style="background-color:rgb(169, 166, 159); padding: 20px 40px;border-style: solid;border-radius: 5px;">
+    <h1>Réserver le véhicule : {{ vehicle.marque }}</h1>
+    <p><strong>Prix journalier :</strong> {{ vehicle.prixJournalier }} €</p>
+    <p><strong>Disponibilité :</strong> {{ vehicle.disponible ? 'Disponible' : 'Indisponible' }}</p>
+
+    <hr>
+    <h2>Formulaire de réservation</h2>
+    {{ form_start(reservationForm) }}
+        {{ form_widget(reservationForm) }}
+        <button type="submit" class="btn btn-primary">Réserver</button>
+    {{ form_end(reservationForm) }}
+
+    <hr>
+    <h2>Commentaires</h2>
+    {% if average is not null %}
+        <p><strong>Note moyenne :</strong> {{ average }} / 5</p>
+    {% endif %}
+    {% if comments is not empty %}
+        {% for comment in comments %}
+            <div class="card mb-2">
+                <div class="card-body">
+                    <p class="card-text">{{ comment.contenu }}</p>
+                    <p class="card-text">
+                        <small class="text-muted">Note : {{ comment.note }} / 5 - par {{ comment.client.email }}</small>
+                    </p>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>Aucun commentaire pour ce véhicule.</p>
+    {% endif %}
+
+    <hr>
+
+    <br>
+    <a href="{{ path('vehicle_index') }}" class="btn btn-secondary mt-3">Retour aux véhicules</a>
+</div>
+{% endblock %}
