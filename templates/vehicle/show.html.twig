@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails du Véhicule{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <h1>{{ vehicle.marque }} - {{ vehicle.immatriculation }}</h1>
+    <p><strong>Prix journalier :</strong> {{ vehicle.prixJournalier }} €</p>
+    <p><strong>Disponibilité :</strong> {{ vehicle.disponible ? 'Disponible' : 'Indisponible' }}</p>
+    
+    <h2>Photos</h2>
+    <div class="vehicle-photos">
+        {% if vehicle.photos|length > 0 %}
+            <div class="row">
+                {% for photo in vehicle.photos %}
+                    <div class="col-md-3 mb-2">
+                        <img src="{{ asset(photo.path) }}" alt="Photo de {{ vehicle.marque }}" class="img-fluid img-thumbnail">
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>Aucune photo disponible.</p>
+        {% endif %}
+    </div>
+    
+    <a href="{{ path('vehicle_index') }}" class="btn btn-secondary mt-3">Retour à la liste des véhicules</a>
+</div>
+{% endblock %}

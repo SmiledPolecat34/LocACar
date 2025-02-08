@@ -3,15 +3,14 @@
 {% block title %}Liste des Véhicules{% endblock %}
 
 {% block body %}
-<div style="min-height: 100pt;">
+<div class="container mt-4">
     <h1 class="mb-4">Liste des Véhicules</h1>
     
-    {# Bouton visible uniquement pour l'admin #}
     {% if is_granted('ROLE_ADMIN') %}
         <a href="{{ path('vehicle_new') }}" class="btn btn-primary mb-3">Ajouter un véhicule</a>
     {% endif %}
     
-    {# Formulaire de filtrage – envoi des filtres en GET #}
+    {# Votre code existant pour le formulaire de filtrage et l'affichage des véhicules #}
     <form method="get" action="{{ path('vehicle_index') }}" class="mb-4">
         <div class="row">
             <div class="col-md-4">
@@ -41,7 +40,6 @@
         <button type="submit" class="btn btn-secondary mt-3">Filtrer</button>
     </form>
 
-    {# Affichage de la liste des véhicules #}
     {% if vehicles is not empty %}
         <table class="table table-hover">
             <thead class="table-dark">

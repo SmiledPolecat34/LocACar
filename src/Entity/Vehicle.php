@@ -1,12 +1,12 @@
 <?php
+
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
-use App\Repository\VehicleRepository;
+use Doctrine\Common\Collections\Collection;
 
-#[ORM\Entity(repositoryClass: VehicleRepository::class)]
+#[ORM\Entity]
 class Vehicle
 {
     #[ORM\Id]
@@ -26,11 +26,12 @@ class Vehicle
     #[ORM\Column(type:"boolean")]
     private ?bool $disponible = true;
 
-    #[ORM\OneToMany(mappedBy:"vehicle", targetEntity: \App\Entity\Comment::class, cascade:["remove"], orphanRemoval:true)]
-    private Collection $comments;
+    #[ORM\OneToMany(mappedBy:"vehicle", targetEntity:Photo::class, cascade:["persist","remove"], orphanRemoval:true)]
+    private Collection $photos;
 
-    public function __construct() {
-        $this->comments = new ArrayCollection();
+    public function __construct()
+    {
+        $this->photos = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -83,27 +84,27 @@ class Vehicle
     }
 
     /**
-     * @return Collection|Comment[]
+     * @return Collection|Photo[]
      */
-    public function getComments(): Collection
+    public function getPhotos(): Collection
     {
-        return $this->comments;
+        return $this->photos;
     }
 
-    public function addComment(\App\Entity\Comment $comment): self
+    public function addPhoto(Photo $photo): self
     {
-        if (!$this->comments->contains($comment)) {
-            $this->comments[] = $comment;
-            $comment->setVehicle($this);
+        if (!$this->photos->contains($photo)) {
+            $this->photos[] = $photo;
+            $photo->setVehicle($this);
         }
         return $this;
     }
 
-    public function removeComment(\App\Entity\Comment $comment): self
+    public function removePhoto(Photo $photo): self
     {
-        if ($this->comments->removeElement($comment)) {
-            if ($comment->getVehicle() === $this) {
-                $comment->setVehicle(null);
+        if ($this->photos->removeElement($photo)) {
+            if ($photo->getVehicle() === $this) {
+                $photo->setVehicle(null);
             }
         }
         return $this;

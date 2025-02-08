@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes véhicules favoris{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <h1>Mes véhicules favoris</h1>
+    {% if favorites is not empty %}
+        <ul class="list-group">
+            {% for vehicle in favorites %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        {% if reservationMapping[vehicle.id] is not null %}
+                            <a href="{{ path('reservation_show', {'id': reservationMapping[vehicle.id]}) }}" class="text-decoration-none">
+                                {{ vehicle.marque }} - ({{ vehicle.prixJournalier }} €/jour)
+                            </a>
+                        {% else %}
+                            <a href="{{ path('reservation_new', {'vehicleId': vehicle.id}) }}" class="text-decoration-none">
+                                {{ vehicle.marque }} - ({{ vehicle.prixJournalier }} €/jour)
+                            </a>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if reservationMapping[vehicle.id] is not null %}
+                            <a href="{{ path('reservation_show', {'id': reservationMapping[vehicle.id]}) }}" class="btn btn-info btn-sm">
+                                Voir ma réservation
+                            </a>
+                        {% else %}
+                            <span class="btn btn-secondary btn-sm disabled">Réservation non effectuée</span>
+                        {% endif %}
+                        <a href="{{ path('favorite_toggle', {'id': vehicle.id}) }}" class="btn btn-danger btn-sm">
+                            Retirer des favoris
+                        </a>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Vous n'avez aucun véhicule en favoris.</p>
+    {% endif %}
+    <a href="{{ path('vehicle_index') }}" class="btn btn-secondary mt-3">Retour à la liste des véhicules</a>
+</div>
+{% endblock %}

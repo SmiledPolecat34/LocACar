@@ -10,6 +10,22 @@
     <p><strong>Date de fin :</strong> {{ reservation.dateFin|date('d/m/Y') }}</p>
     <p><strong>Prix total :</strong> {{ reservation.prixTotal }} €</p>
 
+    {% set nbPhotos = reservation.vehicle.photos|length %}
+<p>Nombre de photos pour ce véhicule : {{ nbPhotos }}</p>
+
+{% if nbPhotos > 0 %}
+    {% for photo in reservation.vehicle.photos %}
+        <img src="{{ asset(photo.path) }}" alt="Photo" class="img-fluid">
+    {% endfor %}
+{% else %}
+    <p>Aucune photo associée au véhicule.</p>
+{% endif %}
+
+
+
+    
+    <p><strong>Nombre total de réservations pour ce véhicule :</strong> {{ reservationCount }}</p>
+
     {# Boutons pour modifier/annuler la réservation #}
     {% if is_granted('ROLE_ADMIN') or (app.user and app.user.id == reservation.client.id) %}
         {% if is_granted('ROLE_ADMIN') or (reservation.dateDebut > "now"|date("Y-m-d H:i:s")) %}
@@ -24,6 +40,16 @@
             </div>
         {% endif %}
     {% endif %}
+    {% if is_granted('ROLE_USER') %}
+    <a href="{{ path('favorite_toggle', {'id': reservation.vehicle.id}) }}" class="btn btn-success btn-sm">
+        {% if reservation.vehicle in app.user.favorites %}
+            Retirer des favoris
+        {% else %}
+            Ajouter aux favoris
+        {% endif %}
+    </a>
+{% endif %}
+
 
     <hr>
 

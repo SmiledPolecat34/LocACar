@@ -52,6 +52,12 @@
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ path('reservation_index') }}">Réservations</a>
                             </li>
+                            
+                            <li class="nav-item">
+                                {% if is_granted('ROLE_USER') %}
+                                    <a class="nav-link" href="{{ path('favorite_list') }}">Mes favoris</a>
+                                {% endif %}
+                            </li>
     
                             {# Liens réservés aux administrateurs #}
                             {% if is_granted('ROLE_ADMIN') %}

@@ -3,41 +3,56 @@
 {% block title %}Réserver le véhicule{% endblock %}
 
 {% block body %}
-<div style="background-color:rgb(169, 166, 159); padding: 20px 40px;border-style: solid;border-radius: 5px;">
+<div class="container mt-4">
     <h1>Réserver le véhicule : {{ vehicle.marque }}</h1>
     <p><strong>Prix journalier :</strong> {{ vehicle.prixJournalier }} €</p>
-    <p><strong>Disponibilité :</strong> {{ vehicle.disponible ? 'Disponible' : 'Indisponible' }}</p>
+    <p><strong>Disponibilité globale :</strong> {{ vehicle.disponible ? 'Disponible' : 'Indisponible' }}</p>
 
-    <hr>
-    <h2>Formulaire de réservation</h2>
+    {# Affichage des photos du véhicule #}
+    <div class="vehicle-photos mb-3">
+        {% if vehicle.photos|length > 0 %}
+            <div class="row">
+                {% for photo in vehicle.photos %}
+                    <div class="col-md-3 mb-2">
+                        <img src="{{ asset(photo.path) }}" alt="Photo de {{ vehicle.marque }}" class="img-fluid img-thumbnail">
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            {% set defaultImages = [
+                'https://via.placeholder.com/300x200?text=Default+1',
+                'https://via.placeholder.com/300x200?text=Default+2',
+                'https://via.placeholder.com/300x200?text=Default+3'
+            ] %}
+            <img src="{{ random(defaultImages) }}" alt="Photo par défaut" class="img-fluid img-thumbnail">
+        {% endif %}
+    </div>
+
+    {% if reservationCount is defined %}
+        <p><strong>Nombre total de réservations pour ce véhicule :</strong> {{ reservationCount }}</p>
+    {% endif %}
+
+    {# Formulaire de réservation #}
     {{ form_start(reservationForm) }}
         {{ form_widget(reservationForm) }}
         <button type="submit" class="btn btn-primary">Réserver</button>
     {{ form_end(reservationForm) }}
 
-    <hr>
-    <h2>Commentaires</h2>
-    {% if average is not null %}
-        <p><strong>Note moyenne :</strong> {{ average }} / 5</p>
-    {% endif %}
-    {% if comments is not empty %}
-        {% for comment in comments %}
-            <div class="card mb-2">
-                <div class="card-body">
-                    <p class="card-text">{{ comment.contenu }}</p>
-                    <p class="card-text">
-                        <small class="text-muted">Note : {{ comment.note }} / 5 - par {{ comment.client.email }}</small>
-                    </p>
-                </div>
+    {% if commentForm is defined and commentForm %}
+        <h3>Laisser un commentaire</h3>
+        {{ form_start(commentForm) }}
+            <div class="mb-3">
+                {{ form_label(commentForm.contenu) }}
+                {{ form_widget(commentForm.contenu, {'attr': {'class': 'form-control'}}) }}
+                {{ form_errors(commentForm.contenu) }}
             </div>
-        {% endfor %}
-    {% else %}
-        <p>Aucun commentaire pour ce véhicule.</p>
+            <div class="mb-3">
+                {{ form_label(commentForm.note) }}
+                {{ form_widget(commentForm.note, {'attr': {'class': 'form-control', 'min': 1, 'max': 5}}) }}
+                {{ form_errors(commentForm.note) }}
+            </div>
+            <button type="submit" class="btn btn-primary">Envoyer</button>
+        {{ form_end(commentForm) }}
     {% endif %}
-
-    <hr>
-
-    <br>
-    <a href="{{ path('vehicle_index') }}" class="btn btn-secondary mt-3">Retour aux véhicules</a>
 </div>
 {% endblock %}

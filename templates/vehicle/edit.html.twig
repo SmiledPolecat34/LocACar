@@ -29,7 +29,10 @@
             {{ form_widget(form.disponible) }}
             {{ form_errors(form.disponible) }}
         </div>
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        <div style="display: flex; align-items: baseline; justify-content: space-between; width: 185px;">
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <a href="{{ path('vehicle_index') }}" class="btn btn-secondary mt-3">Retour</a>
+        </div>
     {{ form_end(form) }}
 </div>
 {% endblock %}

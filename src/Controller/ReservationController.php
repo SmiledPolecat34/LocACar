@@ -36,146 +36,163 @@ class ReservationController extends AbstractController
     #[Route('/new/{vehicleId}', name: 'reservation_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $em, int $vehicleId): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_USER');
-        $user = $this->getUser();
-        $vehicle = $em->getRepository(Vehicle::class)->find($vehicleId);
-        if (!$vehicle) {
-            throw $this->createNotFoundException("Véhicule non trouvé");
+    $this->denyAccessUnlessGranted('ROLE_USER');
+    $user = $this->getUser();
+    $vehicle = $em->getRepository(\App\Entity\Vehicle::class)->find($vehicleId);
+    if (!$vehicle) {
+        throw $this->createNotFoundException("Véhicule non trouvé");
+    }
+    
+    // Calcul du nombre total de réservations pour ce véhicule
+    $reservationCount = $em->getRepository(\App\Entity\Reservation::class)
+                           ->count(['vehicle' => $vehicle]);
+
+    $reservation = new \App\Entity\Reservation();
+    $reservation->setVehicle($vehicle);
+    $reservation->setClient($user);
+    $reservationForm = $this->createForm(\App\Form\ReservationType::class, $reservation);
+    $reservationForm->handleRequest($request);
+
+    if ($reservationForm->isSubmitted() && $reservationForm->isValid()) {
+        $newDateDebut = $reservation->getDateDebut();
+        $newDateFin   = $reservation->getDateFin();
+
+        // Vérifier si le créneau demandé chevauche une réservation existante
+        $existingReservation = $em->getRepository(\App\Entity\Reservation::class)
+            ->createQueryBuilder('r')
+            ->where('r.vehicle = :vehicle')
+            ->andWhere('r.dateDebut < :newDateFin')
+            ->andWhere('r.dateFin > :newDateDebut')
+            ->setParameter('vehicle', $vehicle)
+            ->setParameter('newDateDebut', $newDateDebut)
+            ->setParameter('newDateFin', $newDateFin)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($existingReservation) {
+            $this->addFlash('error', "Le véhicule est déjà réservé dans ce créneau.");
+            return $this->redirectToRoute('reservation_show', ['id' => $existingReservation->getId()]);
         }
 
-        $reservation = new Reservation();
-        $reservation->setVehicle($vehicle);
-        $reservation->setClient($user);
-        $reservationForm = $this->createForm(ReservationType::class, $reservation);
-        $reservationForm->handleRequest($request);
+        $nbJours = $newDateDebut->diff($newDateFin)->days;
+        $price = $nbJours * $vehicle->getPrixJournalier();
+        // Appliquer une réduction de 10 % si le prix atteint 400 €
+        if ($price >= 400) {
+            $price *= 0.9;
+        }
+        $reservation->setPrixTotal($price);
 
-        if ($reservationForm->isSubmitted() && $reservationForm->isValid()) {
-            $newDateDebut = $reservation->getDateDebut();
-            $newDateFin   = $reservation->getDateFin();
+        $em->persist($reservation);
+        $em->flush();
 
-            // Vérification : si le créneau demandé chevauche une réservation existante pour ce véhicule
-            $existingReservation = $em->getRepository(Reservation::class)
-                ->createQueryBuilder('r')
-                ->where('r.vehicle = :vehicle')
-                ->andWhere('r.dateDebut < :newDateFin')
-                ->andWhere('r.dateFin > :newDateDebut')
-                ->setParameter('vehicle', $vehicle)
-                ->setParameter('newDateDebut', $newDateDebut)
-                ->setParameter('newDateFin', $newDateFin)
-                ->getQuery()
-                ->getOneOrNullResult();
+        $this->addFlash('success', "Réservation effectuée du " .
+            $newDateDebut->format('d/m/Y') . " au " .
+            $newDateFin->format('d/m/Y'));
+        return $this->redirectToRoute('reservation_show', ['id' => $reservation->getId()]);
+    }
 
-            if ($existingReservation) {
-                $this->addFlash('error', "Le véhicule est déjà réservé dans ce créneau.");
-                return $this->redirectToRoute('reservation_show', ['id' => $existingReservation->getId()]);
-            }
+    // Récupérer les commentaires existants pour ce véhicule
+    $commentRepo = $em->getRepository(\App\Entity\Comment::class);
+    $comments = $commentRepo->findBy(['vehicle' => $vehicle]);
+    $total = 0;
+    foreach ($comments as $c) {
+        $total += $c->getNote();
+    }
+    $average = count($comments) > 0 ? round($total / count($comments), 1) : null;
 
-            $nbJours = $newDateDebut->diff($newDateFin)->days;
-            $reservation->setPrixTotal($nbJours * $vehicle->getPrixJournalier());
-            // Ici, on ne modifie pas le champ global "disponible" du véhicule.
-            $em->persist($reservation);
+    // Vérifier si l'utilisateur a déjà commenté ce véhicule
+    $existingComment = $commentRepo->findOneBy([
+        'vehicle' => $vehicle,
+        'client'  => $user,
+    ]);
+    $commentFormView = null;
+    if (!$existingComment) {
+        $comment = new \App\Entity\Comment();
+        $comment->setVehicle($vehicle);
+        $comment->setClient($user);
+        $commentForm = $this->createForm(\App\Form\CommentType::class, $comment);
+        $commentForm->handleRequest($request);
+        if ($commentForm->isSubmitted() && $commentForm->isValid()) {
+            $em->persist($comment);
             $em->flush();
-
-            $this->addFlash('success', "Réservation effectuée du " .
-                $newDateDebut->format('d/m/Y') . " au " . $newDateFin->format('d/m/Y'));
-            return $this->redirectToRoute('reservation_show', ['id' => $reservation->getId()]);
+            $this->addFlash('success', "Votre commentaire a été ajouté.");
+            return $this->redirectToRoute('reservation_new', ['vehicleId' => $vehicle->getId()]);
         }
+        $commentFormView = $commentForm->createView();
+    }
 
-        // Pour la page de création, on affiche aussi les commentaires existants pour ce véhicule
-        $commentRepo = $em->getRepository(Comment::class);
-        $comments = $commentRepo->findBy(['vehicle' => $vehicle]);
-        $total = 0;
-        foreach ($comments as $c) {
-            $total += $c->getNote();
-        }
-        $average = count($comments) > 0 ? round($total / count($comments), 1) : null;
-
-        // Vérifier si l'utilisateur a déjà laissé un commentaire pour ce véhicule
-        $existingComment = $commentRepo->findOneBy([
-            'vehicle' => $vehicle,
-            'client'  => $user,
-        ]);
-        $commentFormView = null;
-        if (!$existingComment) {
-            $comment = new Comment();
-            $comment->setVehicle($vehicle);
-            $comment->setClient($user);
-            $commentForm = $this->createForm(CommentType::class, $comment);
-            $commentForm->handleRequest($request);
-            if ($commentForm->isSubmitted() && $commentForm->isValid()) {
-                $em->persist($comment);
-                $em->flush();
-                $this->addFlash('success', "Votre commentaire a été ajouté.");
-                return $this->redirectToRoute('reservation_new', ['vehicleId' => $vehicle->getId()]);
-            }
-            $commentFormView = $commentForm->createView();
-        }
-
-        return $this->render('reservation/new.html.twig', [
-            'reservationForm' => $reservationForm->createView(),
-            'commentForm'     => $commentFormView,
-            'vehicle'         => $vehicle,
-            'comments'        => $comments,
-            'average'         => $average,
-            'existingComment' => $existingComment,
+    return $this->render('reservation/new.html.twig', [
+        'reservationForm' => $reservationForm->createView(),
+        'commentForm'     => $commentFormView,
+        'vehicle'         => $vehicle,
+        'comments'        => $comments,
+        'average'         => $average,
+        'existingComment' => $existingComment,
+        'reservationCount'=> $reservationCount,
         ]);
     }
 
+
     #[Route('/{id}', name: 'reservation_show', methods: ['GET', 'POST'])]
-    public function showReservation(Reservation $reservation, Request $request, EntityManagerInterface $em): Response
-    {
-        $user = $this->getUser();
-        if (!$user || !$user instanceof \App\Entity\User) {
-            $this->addFlash('error', "Vous devez être connecté pour accéder à cette réservation.");
-            return $this->redirectToRoute('app_login');
-        }
-        if (!in_array('ROLE_ADMIN', $user->getRoles()) && $user->getId() !== $reservation->getClient()->getId()) {
-            $this->addFlash('error', "Vous n'avez pas accès à cette réservation.");
-            return $this->redirectToRoute('reservation_index');
-        }
+    public function show(Reservation $reservation, Request $request, EntityManagerInterface $em): Response
+{
+    $user = $this->getUser();
+    if (!$user || !$user instanceof \App\Entity\User) {
+        $this->addFlash('error', "Vous devez être connecté pour accéder à cette réservation.");
+        return $this->redirectToRoute('app_login');
+    }
+    if (!in_array('ROLE_ADMIN', $user->getRoles()) && $user->getId() !== $reservation->getClient()->getId()) {
+        $this->addFlash('error', "Vous n'avez pas accès à cette réservation.");
+        return $this->redirectToRoute('reservation_index');
+    }
 
-        $comments = $em->getRepository(Comment::class)->findBy(['vehicle' => $reservation->getVehicle()]);
-        $total = 0;
-        foreach ($comments as $c) {
-            $total += $c->getNote();
-        }
-        $average = count($comments) > 0 ? round($total / count($comments), 1) : null;
+    $comments = $em->getRepository(\App\Entity\Comment::class)
+                   ->findBy(['vehicle' => $reservation->getVehicle()]);
+    $total = 0;
+    foreach ($comments as $c) {
+        $total += $c->getNote();
+    }
+    $average = count($comments) > 0 ? round($total / count($comments), 1) : null;
 
-        // Vérifier si l'utilisateur a déjà commenté ce véhicule
-        $existingComment = $em->getRepository(Comment::class)->findOneBy([
+    // Vérifier si l'utilisateur a déjà commenté ce véhicule
+    $existingComment = $em->getRepository(\App\Entity\Comment::class)
+        ->findOneBy([
             'vehicle' => $reservation->getVehicle(),
             'client'  => $user,
         ]);
 
-        $commentFormView = null;
-        if (!$existingComment) {
-            $comment = new Comment();
-            $comment->setVehicle($reservation->getVehicle());
-            $comment->setClient($user);
-            $commentForm = $this->createForm(CommentType::class, $comment);
-            $commentForm->handleRequest($request);
-            if ($commentForm->isSubmitted() && $commentForm->isValid()) {
-                $em->persist($comment);
-                $em->flush();
-                $this->addFlash('success', "Votre commentaire a été ajouté.");
-                return $this->redirectToRoute('reservation_show', ['id' => $reservation->getId()]);
-            }
-            $commentFormView = $commentForm->createView();
+    $commentFormView = null;
+    if (!$existingComment) {
+        $comment = new \App\Entity\Comment();
+        $comment->setVehicle($reservation->getVehicle());
+        $comment->setClient($user);
+        $commentForm = $this->createForm(\App\Form\CommentType::class, $comment);
+        $commentForm->handleRequest($request);
+        if ($commentForm->isSubmitted() && $commentForm->isValid()) {
+            $em->persist($comment);
+            $em->flush();
+            $this->addFlash('success', "Votre commentaire a été ajouté.");
+            return $this->redirectToRoute('reservation_show', ['id' => $reservation->getId()]);
         }
-
-        // Récupérer toutes les réservations pour ce véhicule (pour afficher les créneaux réservés)
-        $vehicleReservations = $em->getRepository(Reservation::class)
-            ->findBy(['vehicle' => $reservation->getVehicle()], ['dateDebut' => 'ASC']);
-
-        return $this->render('reservation/show.html.twig', [
-            'reservation'         => $reservation,
-            'comments'            => $comments,
-            'average'             => $average,
-            'commentForm'         => $commentFormView,
-            'existingComment'     => $existingComment,
-            'vehicleReservations' => $vehicleReservations,
-        ]);
+        $commentFormView = $commentForm->createView();
     }
+
+    // Récupérer toutes les réservations pour ce véhicule
+    $vehicleReservations = $em->getRepository(\App\Entity\Reservation::class)
+        ->findBy(['vehicle' => $reservation->getVehicle()], ['dateDebut' => 'ASC']);
+    $reservationCount = count($vehicleReservations);
+
+    return $this->render('reservation/show.html.twig', [
+        'reservation'         => $reservation,
+        'comments'            => $comments,
+        'average'             => $average,
+        'commentForm'         => $commentFormView,
+        'existingComment'     => $existingComment,
+        'vehicleReservations' => $vehicleReservations,
+        'reservationCount'    => $reservationCount,
+    ]);
+    }
+
 
     #[Route('/{id}/edit', name: 'reservation_edit', methods: ['GET', 'POST'])]
     public function edit(Reservation $reservation, Request $request, EntityManagerInterface $em): Response
@@ -212,27 +229,29 @@ class ReservationController extends AbstractController
     #[Route('/{id}/cancel', name: 'reservation_cancel', methods: ['POST'])]
     public function cancel(Reservation $reservation, Request $request, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
-        if (!$user || !$user instanceof \App\Entity\User) {
-            throw $this->createAccessDeniedException("Vous devez être connecté pour annuler une réservation.");
-        }
-        if (!in_array('ROLE_ADMIN', $user->getRoles()) && $user->getId() !== $reservation->getClient()->getId()) {
-            throw $this->createAccessDeniedException("Vous n'avez pas accès à annuler cette réservation.");
-        }
-        if (!in_array('ROLE_ADMIN', $user->getRoles()) && new \DateTime() >= $reservation->getDateDebut()) {
-            $this->addFlash('error', "Vous ne pouvez pas annuler une réservation déjà commencée.");
-            return $this->redirectToRoute('reservation_show', ['id' => $reservation->getId()]);
-        }
-
-        if ($this->isCsrfTokenValid('cancel' . $reservation->getId(), $request->request->get('_token'))) {
-            $reservation->getVehicle()->setDisponible(true);
-            $em->remove($reservation);
-            $em->flush();
-            $this->addFlash('success', "Réservation annulée avec succès.");
-        } else {
-            $this->addFlash('error', "Token CSRF invalide.");
-        }
-    
-        return $this->redirectToRoute('reservation_index');
+    $user = $this->getUser();
+    if (!$user || !$user instanceof \App\Entity\User) {
+        throw $this->createAccessDeniedException("Vous devez être connecté pour annuler une réservation.");
     }
+    if (!in_array('ROLE_ADMIN', $user->getRoles()) && $user->getId() !== $reservation->getClient()->getId()) {
+        throw $this->createAccessDeniedException("Vous n'avez pas accès à annuler cette réservation.");
+    }
+    if (!in_array('ROLE_ADMIN', $user->getRoles()) && new \DateTime() >= $reservation->getDateDebut()) {
+        $this->addFlash('error', "Vous ne pouvez pas annuler une réservation déjà commencée.");
+        return $this->redirectToRoute('reservation_show', ['id' => $reservation->getId()]);
+    }
+
+    if ($this->isCsrfTokenValid('cancel' . $reservation->getId(), $request->request->get('_token'))) {
+        $reservation->getVehicle()->setDisponible(true);
+        $em->remove($reservation);
+        $em->flush();
+        $this->addFlash('success', "Réservation annulée avec succès.");
+    } else {
+        $this->addFlash('error', "Token CSRF invalide.");
+    }
+    
+    // Redirection vers le menu des réservations (http://localhost:8000/reservation/)
+    return $this->redirectToRoute('reservation_index');
+    }
+
 }

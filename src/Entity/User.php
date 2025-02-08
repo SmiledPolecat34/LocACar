@@ -1,8 +1,9 @@
 <?php
-
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -28,6 +29,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     #[ORM\Column(type: 'string')]
     private ?string $password = null;
+
+    // Nouvelle propriété pour les véhicules favoris
+    #[ORM\ManyToMany(targetEntity: \App\Entity\Vehicle::class)]
+    #[ORM\JoinTable(name: "user_favorites")]
+    private Collection $favorites;
+
+    public function __construct()
+    {
+        $this->favorites = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -60,7 +71,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $roles = $this->roles;
         $roles[] = 'ROLE_USER';
-
         return array_unique($roles);
     }
 
@@ -87,5 +97,27 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function eraseCredentials()
     {
         
+    }
+
+    /**
+     * @return Collection|Vehicle[]
+     */
+    public function getFavorites(): Collection
+    {
+        return $this->favorites;
+    }
+
+    public function addFavorite(Vehicle $vehicle): self
+    {
+        if (!$this->favorites->contains($vehicle)) {
+            $this->favorites[] = $vehicle;
+        }
+        return $this;
+    }
+
+    public function removeFavorite(Vehicle $vehicle): self
+    {
+        $this->favorites->removeElement($vehicle);
+        return $this;
     }
 }
