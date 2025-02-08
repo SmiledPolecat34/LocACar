@@ -17,92 +17,112 @@ class VehicleController extends AbstractController
 {
     #[Route('/', name: 'vehicle_index', methods: ['GET'])]
     public function index(Request $request, VehicleRepository $vehicleRepository, EntityManagerInterface $em): Response
-    {
+{
+    // Récupérer les filtres depuis l'URL (query string)
+    $marque     = $request->query->get('marque');
+    $prixMax    = $request->query->get('prix');
+    $disponible = $request->query->get('disponible');
 
-        // Exemple de récupération des filtres et des marques (comme précédemment)
-        $marque     = $request->query->get('marque');
-        $prixMax    = $request->query->get('prix');
-        $disponible = $request->query->get('disponible');
-
-        $qb = $vehicleRepository->createQueryBuilder('v');
-        if ($marque) {
-            $qb->andWhere('v.marque = :marque')
-               ->setParameter('marque', $marque);
-        }
-        if ($prixMax) {
-            $qb->andWhere('v.prixJournalier <= :prixMax')
-               ->setParameter('prixMax', $prixMax);
-        }
-        if ($disponible !== null && $disponible !== '') {
-            $boolDisponible = ($disponible == '1');
-            $qb->andWhere('v.disponible = :disponible')
-               ->setParameter('disponible', $boolDisponible);
-        }
-        $vehicles = $qb->getQuery()->getResult();
-
-        // Préparer les filtres pour le formulaire
-        $filters = [
-            'marque'     => $marque,
-            'prix'       => $prixMax,
-            'disponible' => $disponible,
-        ];
-
-        // Récupérer les marques distinctes
-        $conn = $em->getConnection();
-        $sql = 'SELECT DISTINCT marque FROM vehicle ORDER BY marque ASC';
-        $stmt = $conn->executeQuery($sql);
-        $marquesData = $stmt->fetchAllAssociative();
-        $marques = array_map(function ($row) {
-            return $row['marque'];
-        }, $marquesData);
-
-        return $this->render('vehicle/index.html.twig', [
-            'vehicles' => $vehicles,
-            'filters'  => $filters,
-            'marques'  => $marques,
-        ]);
+    // Construction du QueryBuilder pour filtrer les véhicules
+    $qb = $vehicleRepository->createQueryBuilder('v');
+    if ($marque) {
+        $qb->andWhere('v.marque = :marque')
+           ->setParameter('marque', $marque);
     }
+    if ($prixMax) {
+        $qb->andWhere('v.prixJournalier <= :prixMax')
+           ->setParameter('prixMax', $prixMax);
+    }
+    if ($disponible !== null && $disponible !== '') {
+        $boolDisponible = ($disponible == '1');
+        $qb->andWhere('v.disponible = :disponible')
+           ->setParameter('disponible', $boolDisponible);
+    }
+    $vehicles = $qb->getQuery()->getResult();
 
-    #[Route('/new', name: 'vehicle_new', methods: ['GET','POST'])]
+    // Pour chaque véhicule, on "analyse" les données en base pour voir s'il y a une réservation active.
+    // Une réservation active est celle dont la date de début est passée et dont la date de fin n'est pas encore atteinte.
+    $now = new \DateTime();
+    foreach ($vehicles as $vehicle) {
+        $activeReservation = $em->getRepository(\App\Entity\Reservation::class)
+            ->createQueryBuilder('r')
+            ->where('r.vehicle = :vehicle')
+            ->andWhere('r.dateDebut <= :now')
+            ->andWhere('r.dateFin > :now')
+            ->setParameter('vehicle', $vehicle)
+            ->setParameter('now', $now)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($activeReservation) {
+            $vehicle->setDisponible(false);
+        } else {
+            $vehicle->setDisponible(true);
+        }
+    }
+    // Mettre à jour la base avec ces modifications
+    $em->flush();
+
+    // Préparer les filtres pour le formulaire
+    $filters = [
+        'marque'     => $marque,
+        'prix'       => $prixMax,
+        'disponible' => $disponible,
+    ];
+
+    // Récupérer les marques distinctes
+    $conn = $em->getConnection();
+    $sql = 'SELECT DISTINCT marque FROM vehicle ORDER BY marque ASC';
+    $stmt = $conn->executeQuery($sql);
+    $marquesData = $stmt->fetchAllAssociative();
+    $marques = array_map(function ($row) {
+        return $row['marque'];
+    }, $marquesData);
+
+    return $this->render('vehicle/index.html.twig', [
+        'vehicles' => $vehicles,
+        'filters'  => $filters,
+        'marques'  => $marques,
+    ]);
+    }
+    
+    #[Route('/new', name: 'vehicle_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $em): Response
     {
         $vehicle = new Vehicle();
         $form = $this->createForm(VehicleType::class, $vehicle);
         $form->handleRequest($request);
-
+        
         if ($form->isSubmitted() && $form->isValid()) {
 
-            // Récupérer la liste des fichiers uploadés via le champ "images"
-            // qui est non mappé (mapped => false)
+            // Récupérer les fichiers uploadés depuis le champ "images"
+            /** @var UploadedFile[] $uploadedFiles */
             $uploadedFiles = $form->get('images')->getData();
-            // Paramètre photos_directory défini dans config/services.yaml
             $photosDirectory = $this->getParameter('photos_directory');
-
+            
             if ($uploadedFiles) {
-                // On parcourt chaque fichier
                 foreach ($uploadedFiles as $uploadedFile) {
                     if ($uploadedFile instanceof UploadedFile) {
-                        // Générer un nom de fichier unique
-                        $newFilename = uniqid().'.'.$uploadedFile->guessExtension();
-                        // Déplacer le fichier dans le répertoire cible
+                        // Générer un nom unique pour le fichier
+                        $newFilename = uniqid() . '.' . $uploadedFile->guessExtension();
+                        // Déplacer le fichier dans le dossier de destination
                         $uploadedFile->move($photosDirectory, $newFilename);
-
-                        // Créer une entité Photo, et la lier au Vehicle
+                        
+                        // Créer une entité Photo et lier au véhicule
                         $photo = new Photo();
                         $photo->setPath('uploads/photos/' . $newFilename);
                         $photo->setVehicle($vehicle);
-
+                        // Ajout de la photo au véhicule
                         $vehicle->addPhoto($photo);
                     }
                 }
             }
-
-            // Persister le véhicule + flush
+            
             $em->persist($vehicle);
             $em->flush();
             return $this->redirectToRoute('vehicle_index');
         }
-
+        
         return $this->render('vehicle/new.html.twig', [
             'form' => $form->createView(),
             'vehicle' => $vehicle,

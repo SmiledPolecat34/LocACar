@@ -1,11 +1,28 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Modifier un Véhicule{% endblock %}
+{% block title %}Modifier le Véhicule{% endblock %}
 
 {% block body %}
 <div class="container mt-4">
-    <h1>Modifier un Véhicule</h1>
-    {{ form_start(form) }}
+    <h1>Modifier le Véhicule : {{ vehicle.marque }}</h1>
+    
+    {# Affichage des photos du véhicule #}
+    <div class="mb-3">
+        <h3>Photos du véhicule</h3>
+        {% if vehicle.photos|length > 0 %}
+            <div class="row">
+                {% for photo in vehicle.photos %}
+                    <div class="col-md-3 mb-2">
+                        <img src="{{ asset(photo.path) }}" alt="Photo de {{ vehicle.marque }}" class="img-fluid img-thumbnail">
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>Aucune photo disponible.</p>
+        {% endif %}
+    </div>
+    
+    {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
         <div class="mb-3">
             {{ form_label(form.marque) }}
             {{ form_widget(form.marque, {'attr': {'class': 'form-control'}}) }}
@@ -18,7 +35,13 @@
         </div>
         <div class="mb-3">
             {{ form_label(form.prixJournalier) }}
-            {{ form_widget(form.prixJournalier, {'attr': {'class': 'form-range'}}) }}
+            {{ form_widget(form.prixJournalier, {'attr': {
+                'class': 'form-range',
+                'min': 100,
+                'max': 500,
+                'step': 1,
+                'oninput': 'document.getElementById("priceCounter").innerText = this.value'
+            }}) }}
             <small class="form-text text-muted">
                 Prix sélectionné : <span id="priceCounter">{{ form.prixJournalier.vars.value|default(100) }}</span> €
             </small>
@@ -29,10 +52,13 @@
             {{ form_widget(form.disponible) }}
             {{ form_errors(form.disponible) }}
         </div>
-        <div style="display: flex; align-items: baseline; justify-content: space-between; width: 185px;">
-            <button type="submit" class="btn btn-primary">Enregistrer</button>
-            <a href="{{ path('vehicle_index') }}" class="btn btn-secondary mt-3">Retour</a>
+        <div class="mb-3">
+            {{ form_label(form.images) }}
+            {{ form_widget(form.images, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(form.images) }}
         </div>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        <a href="{{ path('vehicle_index') }}" class="btn btn-secondary">Retour</a>
     {{ form_end(form) }}
 </div>
 {% endblock %}

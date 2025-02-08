@@ -3,6 +3,7 @@
 {% block title %}Détails de la Réservation{% endblock %}
 
 {% block body %}
+<div class="container mt-4">
     <h1>Détails de la Réservation</h1>
     <p><strong>Véhicule :</strong> {{ reservation.vehicle.marque }} {% if is_granted('ROLE_ADMIN') %}- {{ reservation.vehicle.immatriculation }}{% endif %}</p>
     <p><strong>Réservé par :</strong> {{ reservation.client.email }}</p>
@@ -10,111 +11,22 @@
     <p><strong>Date de fin :</strong> {{ reservation.dateFin|date('d/m/Y') }}</p>
     <p><strong>Prix total :</strong> {{ reservation.prixTotal }} €</p>
 
-    {% set nbPhotos = reservation.vehicle.photos|length %}
-<p>Nombre de photos pour ce véhicule : {{ nbPhotos }}</p>
-
-{% if nbPhotos > 0 %}
-    {% for photo in reservation.vehicle.photos %}
-        <img src="{{ asset(photo.path) }}" alt="Photo" class="img-fluid">
-    {% endfor %}
-{% else %}
-    <p>Aucune photo associée au véhicule.</p>
-{% endif %}
-
-
-
-    
-    <p><strong>Nombre total de réservations pour ce véhicule :</strong> {{ reservationCount }}</p>
-
-    {# Boutons pour modifier/annuler la réservation #}
-    {% if is_granted('ROLE_ADMIN') or (app.user and app.user.id == reservation.client.id) %}
-        {% if is_granted('ROLE_ADMIN') or (reservation.dateDebut > "now"|date("Y-m-d H:i:s")) %}
-            <a href="{{ path('reservation_edit', {'id': reservation.id}) }}" class="btn btn-warning btn-sm">Modifier la réservation</a>
-            <form action="{{ path('reservation_cancel', {'id': reservation.id}) }}" method="post" style="display:inline;">
-                <input type="hidden" name="_token" value="{{ csrf_token('cancel' ~ reservation.id) }}">
-                <button type="submit" class="btn btn-danger btn-sm">Annuler la réservation</button>
-            </form>
-        {% else %}
-            <div class="alert alert-danger mt-3">
-                Vous ne pouvez pas modifier ou annuler cette réservation, car elle a déjà commencé.
+    <div class="mb-3">
+        <h3>Photos du véhicule</h3>
+        {% if reservation.getVehiclePhotos()|length > 0 %}
+            <div class="row">
+                {% for photo in reservation.getVehiclePhotos() %}
+                    <div class="col-md-3 mb-2">
+                        <img src="{{ asset(photo.path) }}" alt="Photo de {{ reservation.vehicle.marque }}" class="img-fluid img-thumbnail">
+                    </div>
+                {% endfor %}
             </div>
-        {% endif %}
-    {% endif %}
-    {% if is_granted('ROLE_USER') %}
-    <a href="{{ path('favorite_toggle', {'id': reservation.vehicle.id}) }}" class="btn btn-success btn-sm">
-        {% if reservation.vehicle in app.user.favorites %}
-            Retirer des favoris
         {% else %}
-            Ajouter aux favoris
+            <p>Aucune photo disponible pour ce véhicule.</p>
         {% endif %}
-    </a>
-{% endif %}
+    </div>
 
-
-    <hr>
-
-    <h2>Créneaux réservés pour ce véhicule</h2>
-    {% if vehicleReservations is not empty %}
-        <ul>
-            {% for res in vehicleReservations %}
-                <li>
-                    Du {{ res.dateDebut|date('d/m/Y') }} au {{ res.dateFin|date('d/m/Y') }}
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>Aucun créneau réservé pour ce véhicule.</p>
-    {% endif %}
-
-    <hr>
-
-    <h2>Commentaires</h2>
-    {% if average is not null %}
-        <p><strong>Note moyenne :</strong> {{ average }} / 5</p>
-    {% else %}
-        <p>Aucun commentaire pour ce véhicule.</p>
-    {% endif %}
-    {% for comment in comments %}
-        <div class="card mb-2">
-            <div class="card-body">
-                <p class="card-text">{{ comment.contenu }}</p>
-                <p class="card-text"><small class="text-muted">Note : {{ comment.note }} / 5 - par {{ comment.client.email }}</small></p>
-            </div>
-        </div>
-    {% endfor %}
-
-    <hr>
-
-    {# Si l'utilisateur a déjà commenté, afficher les boutons d'édition/suppression ; sinon, afficher le formulaire #}
-    {% if existingComment %}
-        <div class="alert alert-info mt-3">
-            Vous avez déjà commenté ce véhicule.
-            <a href="{{ path('comment_edit', {'id': existingComment.id}) }}" class="btn btn-warning btn-sm">Modifier</a>
-            <form action="{{ path('comment_delete', {'id': existingComment.id}) }}" method="post" style="display:inline;">
-                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ existingComment.id) }}">
-                <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
-            </form>
-        </div>
-    {% else %}
-        {% if commentForm %}
-            <h3>Laisser un commentaire</h3>
-            {{ form_start(commentForm) }}
-                <div class="mb-3">
-                    {{ form_label(commentForm.contenu) }}
-                    {{ form_widget(commentForm.contenu, {'attr': {'class': 'form-control'}}) }}
-                    {{ form_errors(commentForm.contenu) }}
-                </div>
-                <div class="mb-3">
-                    {{ form_label(commentForm.note) }}
-                    {{ form_widget(commentForm.note, {'attr': {'class': 'form-control', 'min': 1, 'max': 5}}) }}
-                    {{ form_errors(commentForm.note) }}
-                </div>
-                <button type="submit" class="btn btn-primary">Envoyer</button>
-            {{ form_end(commentForm) }}
-        {% endif %}
-    {% endif %}
-
-    <br>
     <a href="{{ path('reservation_index') }}" class="btn btn-secondary mt-3">Retour à la liste des réservations</a>
     <a href="{{ path('vehicle_index') }}" class="btn btn-secondary mt-3">Retour à la liste des véhicules</a>
+</div>
 {% endblock %}

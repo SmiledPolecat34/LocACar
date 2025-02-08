@@ -51,6 +51,11 @@ class Reservation
         return $this;
     }
 
+    public function getVehiclePhotos(): \Doctrine\Common\Collections\Collection
+    {
+        return $this->vehicle ? $this->vehicle->getPhotos() : new \Doctrine\Common\Collections\ArrayCollection();
+    }
+
     public function getClient(): ?User
     {
         return $this->client;

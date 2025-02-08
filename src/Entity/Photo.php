@@ -3,7 +3,6 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PhotoRepository;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 #[ORM\Entity(repositoryClass: PhotoRepository::class)]
 class Photo
@@ -13,20 +12,17 @@ class Photo
     #[ORM\Column(type:"integer")]
     private ?int $id = null;
 
-    // Emplacement (URL ou chemin) de la photo, persisté
+    // Stocke l'emplacement (chemin ou URL) de la photo
     #[ORM\Column(type:"string", length:255)]
     private ?string $path = null;
 
-    // Position de la photo (ordre d'affichage)
+    // Position de la photo pour l'ordre d'affichage (par défaut 0)
     #[ORM\Column(type:"integer", options: ["default" => 0])]
     private ?int $position = 0;
 
     #[ORM\ManyToOne(targetEntity: \App\Entity\Vehicle::class, inversedBy:"photos")]
     #[ORM\JoinColumn(nullable:false, onDelete:"CASCADE")]
     private ?\App\Entity\Vehicle $vehicle = null;
-
-    // Propriété non mappée pour l'upload (ne sera pas persistée en base)
-    private ?UploadedFile $file = null;
 
     public function getId(): ?int
     {
@@ -63,18 +59,6 @@ class Photo
     public function setVehicle(\App\Entity\Vehicle $vehicle): self
     {
         $this->vehicle = $vehicle;
-        return $this;
-    }
-
-    // Getter et setter pour la propriété file
-    public function getFile(): ?UploadedFile
-    {
-        return $this->file;
-    }
-
-    public function setFile(?UploadedFile $file): self
-    {
-        $this->file = $file;
         return $this;
     }
 }

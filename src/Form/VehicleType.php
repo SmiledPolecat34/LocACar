@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Form;
 
 use App\Entity\Vehicle;
@@ -36,12 +35,12 @@ class VehicleType extends AbstractType
                 'label' => 'Disponible',
                 'required' => false,
             ])
-            // Champ multiple pour sélectionner plusieurs images
+            // Champ pour uploader plusieurs images
             ->add('images', FileType::class, [
-                'mapped' => false,
+                'mapped' => false,  // Ce champ n'est pas lié à une propriété de l'entité Vehicle
                 'required' => false,
                 'multiple' => true,
-                'label' => 'Photo(s)',
+                'label' => 'Photo(s) du véhicule',
                 'attr' => [
                     'accept' => 'image/png, image/jpeg'
                 ],

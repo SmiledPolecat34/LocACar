@@ -14,10 +14,10 @@ class PhotoType extends AbstractType
     {
         $builder
             ->add('file', FileType::class, [
-                'label' => 'Choisissez une image',
-                // En laissant mapped à true, le formulaire affectera la propriété file (non persistée)
+                'label'    => 'Choisissez une image',
+                'mapped'   => false,
                 'required' => false,
-                'attr' => [
+                'attr'     => [
                     'accept' => 'image/png, image/jpeg'
                 ],
             ])

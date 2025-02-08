@@ -1,12 +1,13 @@
 <?php
-
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
+use App\Repository\VehicleRepository;
+use App\Entity\Photo;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: VehicleRepository::class)]
 class Vehicle
 {
     #[ORM\Id]
@@ -26,7 +27,7 @@ class Vehicle
     #[ORM\Column(type:"boolean")]
     private ?bool $disponible = true;
 
-    #[ORM\OneToMany(mappedBy:"vehicle", targetEntity:Photo::class, cascade:["persist","remove"], orphanRemoval:true)]
+    #[ORM\OneToMany(mappedBy:"vehicle", targetEntity:Photo::class, cascade:["persist", "remove"], orphanRemoval:true, fetch:"EAGER")]
     private Collection $photos;
 
     public function __construct()
